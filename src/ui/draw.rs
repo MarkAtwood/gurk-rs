@@ -267,6 +267,7 @@ fn draw_messages(f: &mut Frame, app: &mut App, area: Rect) {
     let height = area.height.saturating_sub(2) as usize;
     let width = area.width.saturating_sub(2) as usize;
     if height == 0 || width == 0 {
+        app.images.finish_frame(); // no images drawn: drop the queue
         return;
     }
     app.message_view_height = height;
@@ -286,6 +287,7 @@ fn draw_messages(f: &mut Frame, app: &mut App, area: Rect) {
                 .centered(),
             area,
         );
+        app.images.finish_frame(); // no images drawn: drop the queue
         return;
     };
 
@@ -301,6 +303,7 @@ fn draw_messages(f: &mut Frame, app: &mut App, area: Rect) {
                 .centered(),
             area,
         );
+        app.images.finish_frame(); // no images drawn: drop the queue
         return;
     }
 
