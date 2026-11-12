@@ -1561,4 +1561,55 @@ mod image_tests {
         let input_row = find_row(&buffer, "Input").unwrap();
         assert!(top + 10 < input_row, "image above the input box");
     }
+
+    /// When the messages view stops showing images (no channel selected, or a channel without
+    /// messages), the images queued for the previous frame must not be encoded anymore.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_queue_dropped_when_view_shows_no_images() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let (mut app, _events, _sent_messages) = test_app().await;
+        app.set_image_picker(Picker::halfblocks());
+        let channel_id = app.channels().first().unwrap().id;
+        // large photos, so the encoder is still busy with the first one when the next frame is
+        // drawn
+        for i in 0..12u64 {
+            let path = tempdir.path().join(format!("photo{i}.png"));
+            RgbImage::from_pixel(1500, 1500, Rgb([255, 0, 0]))
+                .save(&path)
+                .unwrap();
+            let message = Message {
+                attachments: vec![Attachment {
+                    id: i.to_string(),
+                    content_type: "image/png".to_string(),
+                    filename: path,
+                    size: 42,
+                }],
+                ..Message::new(
+                    app.user_id,
+                    Some("look".to_string()),
+                    [],
+                    1000 + i,
+                    Vec::new(),
+                )
+            };
+            app.store_message(channel_id, message);
+        }
+
+        let mut terminal = Terminal::new(TestBackend::new(100, 200)).unwrap();
+        terminal.draw(|f| draw(f, &mut app)).unwrap();
+        assert!(
+            app.images.queued_count() > 1,
+            "several images queued: {}",
+            app.images.queued_count()
+        );
+
+        // the channel is closed: nothing is drawn, so nothing should stay queued
+        app.window = None;
+        terminal.draw(|f| draw(f, &mut app)).unwrap();
+        assert_eq!(
+            app.images.queued_count(),
+            0,
+            "stale queue left to the encoder"
+        );
+    }
 }

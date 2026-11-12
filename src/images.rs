@@ -286,6 +286,12 @@ impl ImageCache {
     fn encoded_count(&self) -> usize {
         self.shared.entries.lock().unwrap().len()
     }
+
+    /// Number of images waiting in the encoder's queue
+    #[cfg(test)]
+    pub(crate) fn queued_count(&self) -> usize {
+        self.shared.queue.lock().unwrap().jobs.len()
+    }
 }
 
 impl Drop for ImageCache {
